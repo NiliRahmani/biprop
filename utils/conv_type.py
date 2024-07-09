@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import math
 
 from args import args as parser_args
+import json
 
 import pdb
 DenseConv = nn.Conv2d
@@ -74,6 +75,14 @@ class GetQuantnet_binary(autograd.Function):
         q_weight = abs_wgt * out # Remove pruned weights
         num_unpruned = int(k * scores.numel()) # Number of unpruned weights
         alpha = torch.sum(q_weight) / num_unpruned # Compute alpha = || q_weight ||_1 / (number of unpruned weights)
+
+        # Print and save alpha
+        layer_name = f"GetQuantnet_binary_{weights.shape}"
+        print(f"Layer: {layer_name}, Alpha: {alpha.item()}")
+
+        with open('/content/drive/MyDrive/Colab_Results/alpha_values.json', 'a') as f:
+            json.dump({layer_name: alpha.item()}, f)
+            f.write('\n')
 
         # Save absolute value of weights for backward
         ctx.save_for_backward(abs_wgt)
