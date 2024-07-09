@@ -6,6 +6,13 @@ import torch.nn.functional as F
 from utils.eval_utils import accuracy
 from utils.logging import AverageMeter, ProgressMeter
 
+import json
+
+def save_results_to_json(filename, data):
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
+
+
 __all__ = ["train", "validate", "modifier"]
 
 
@@ -128,9 +135,9 @@ def train(train_loader, model, criterion, optimizer, epoch, args, writer):
         #torch.nn.utils.clip_grad_norm_(model.parameters(),1)
         loss.backward()
         # EDITED
-        #print(torch.norm(torch.cat([p.grad.view(-1) for p in model.parameters()])))
+        #print(torch.norm(torch.cat([p.grad.reshape(-1) for p in model.parameters()])))
         if args.grad_clip: torch.nn.utils.clip_grad_value_(model.parameters(),1) 
-        #print(torch.norm(torch.cat([p.grad.view(-1) for p in model.parameters()])))
+        #print(torch.norm(torch.cat([p.grad.reshape(-1) for p in model.parameters()])))
         #for param_name in model.state_dict(): print(param_name, str(model.state_dict()[param_name])[:50])
         #torch.nn.utils.clip_grad_norm_(model.parameters(),1)
         # end
@@ -205,6 +212,8 @@ def validate(val_loader, model, criterion, args, writer, epoch):
     # switch to evaluate mode
     model.eval()
 
+    results = {}
+
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in tqdm.tqdm(
@@ -244,6 +253,15 @@ def validate(val_loader, model, criterion, args, writer, epoch):
 
         if writer is not None:
             progress.write_to_tensorboard(writer, prefix="test", global_step=epoch)
+    
+    # Print and save the acc1 value
+    acc1_value = top1.avg
+    print(f"Validation Results - Acc@1: {acc1_value}")
+    results['epoch'] = epoch
+    results['acc1'] = acc1_value
+
+    # Save results to JSON file
+    save_results_to_json('/content/drive/MyDrive/Colab_Results/validation_results.json', results)
 
     return top1.avg, top5.avg
 
