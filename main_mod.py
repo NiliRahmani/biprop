@@ -156,8 +156,8 @@ def main_worker(args):
 
     # Data loading code
     if 1: #args.evaluate:
-        print("\nModel2 Summary:")
-        summary(model2, (3, 32, 32))
+        # print("\nModel2 Summary:")
+        # summary(model2, (3, 32, 32))
         
         # acc1, acc5 = validate(
         #     data.val_loader, model, criterion, args, writer=None, epoch=args.start_epoch
@@ -395,7 +395,7 @@ def set_alphas(model, alphas):
     alpha_idx = 0
     for name, module in model.named_modules():
         if isinstance(module, (SubnetConv, GlobalSubnetConv)):
-            print(f'\n\n idx: {alpha_idx}, alpha: {alphas[alpha_idx]} \n\n')
+            # print(f'\n\n idx: {alpha_idx}, alpha: {alphas[alpha_idx]} \n\n')
             module.alpha = alphas[alpha_idx]  # <=== Set the alpha for the layer
             alpha_idx += 1
             
@@ -502,7 +502,7 @@ def get_model(args):
     if args.first_layer_dense:
         args.first_layer_type = "DenseConv"
 
-    print("=> Creating model '{}'".format(args.arch))
+    # print("=> Creating model '{}'".format(args.arch))
     model = models.__dict__[args.arch]()
 
     # applying sparsity to the network
@@ -702,5 +702,22 @@ def global_prune_rate(model, args):
 
 
 
+
 if __name__ == "__main__":
+    # import cProfile
+    # import pstats
+    # from io import StringIO
+
+    # pr = cProfile.Profile()
+    # pr.enable()
+
     main()
+
+    # pr.disable()
+    # s = StringIO()
+    # sortby = 'cumulative'
+    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    # ps.print_stats()
+    # with open("profile_output.txt", "w") as f:
+    #     f.write(s.getvalue())
+
