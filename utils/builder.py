@@ -36,8 +36,8 @@ class Builder(object):
     def conv(self, kernel_size, in_planes, out_planes, stride=1, first_layer=False):
         conv_layer = self.first_layer if first_layer else self.conv_layer
 
-        if first_layer:
-            print(f"==> Building first layer with {str(self.first_layer)}")
+        #if first_layer:
+        #   print(f"==> Building first layer with {str(self.first_layer)}")
 
         if kernel_size == 3:
             conv = conv_layer(
@@ -80,8 +80,8 @@ class Builder(object):
     def group_conv(self, kernel_size, in_planes, out_planes, groups=1, stride=1, first_layer=False):
         conv_layer = self.first_layer if first_layer else self.conv_layer
 
-        if first_layer:
-            print(f"==> Building first layer with {str(self.first_layer)}")
+        #if first_layer:
+        #    print(f"==> Building first layer with {str(self.first_layer)}")
 
         if kernel_size == 3:
             conv = conv_layer(
