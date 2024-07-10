@@ -397,7 +397,7 @@ def get_model(args):
     if args.first_layer_dense:
         args.first_layer_type = "DenseConv"
 
-    print("=> Creating model '{}'".format(args.arch))
+    #print("=> Creating model '{}'".format(args.arch))
     model = models.__dict__[args.arch]()
 
     # applying sparsity to the network
