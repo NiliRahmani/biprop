@@ -78,11 +78,17 @@ class GetQuantnet_binary(autograd.Function):
 
         # Print and save alpha
         layer_name = f"GetQuantnet_binary_{weights.shape}"
-        print(f"Layer: {layer_name}, Alpha: {alpha.item()}")
+        # try:
+        #   print(f"Layer: {layer_name}, Alpha: {alpha.item()}")
+        #   with open('/content/drive/MyDrive/Colab_Results/alpha_values.json', 'a') as f:
+        #     json.dump({layer_name: alpha.item()}, f)
+        #     f.write('\n')
+        # except:
+        #   print(f"Layer: {layer_name}, Alpha: {alpha}")
+        #   with open('/content/drive/MyDrive/Colab_Results/alpha_values.json', 'a') as f:
+        #     json.dump({layer_name: alpha}, f)
+        #     f.write('\n')
 
-        with open('/content/drive/MyDrive/Colab_Results/alpha_values.json', 'a') as f:
-            json.dump({layer_name: alpha.item()}, f)
-            f.write('\n')
 
         # Save absolute value of weights for backward
         ctx.save_for_backward(abs_wgt)
@@ -118,8 +124,13 @@ class SubnetConv(nn.Conv2d):
         # For debugging gradients, prints out maximum value in gradients
         if parser_args.debug:
             if quantnet.grad: print ("subnetconv fwd quantnet grad ", torch.max(quantnet.grad))
+        
+        if hasattr(self, 'alpha'):
+            alpha = self.alpha  # <=== Use alpha if set
+        else:
+            alpha = self.prune_rate  # fallback to prune_rate if alpha not set
         # Get binary mask and gain term for subnetwork
-        quantnet = GetQuantnet_binary.apply(self.clamped_scores, self.weight, self.prune_rate)
+        quantnet = GetQuantnet_binary.apply(self.clamped_scores, self.weight, self.prune_rate, alpha)
         # Binarize weights by taking sign, multiply by pruning mask and gain term (alpha)
         w = torch.sign(self.weight) * quantnet
         # Pass binary subnetwork weights to convolution layer
@@ -193,7 +204,7 @@ class GlobalSubnetConv(nn.Conv2d):
             if quantnet.grad: print ("subnetconv fwd quantnet grad ", torch.max(quantnet.grad))
         #print("in conv prune_threshold =", self.prune_threshold)
         # Get binary mask and gain term for subnetwork
-        quantnet = GetGlobalSubnet.apply(self.clamped_scores, self.weight, self.prune_threshold)
+        quantnet = GetGlobalSubnet.apply(self.clamped_scores, self.weight, self.prune_threshold, alpha)
         #quantnet = GetQuantnet_binary.apply(self.clamped_scores, self.weight, self.prune_rate)
         # Binarize weights by taking sign, multiply by pruning mask and gain term (alpha)
         w = torch.sign(self.weight) * quantnet
