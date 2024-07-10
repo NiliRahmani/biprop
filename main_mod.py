@@ -16,7 +16,7 @@ import torch.utils.data.distributed
 from torchvision import datasets, transforms
 
 
-from utils.conv_type import FixedSubnetConv, SampleSubnetConv
+from utils.conv_type import FixedSubnetConv, SampleSubnetConv, GetGlobalSubnet, SubnetConv, GlobalSubnetConv  # <=== Add SubnetConv and GlobalSubnetConv here
 from utils.logging import AverageMeter, ProgressMeter
 from utils.net_utils import (
     set_model_prune_rate,
