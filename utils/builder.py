@@ -260,8 +260,8 @@ class Builder(object):
 
 def get_builder():
 
-    print("==> Conv Type: {}".format(args.conv_type))
-    print("==> BN Type: {}".format(args.bn_type))
+    #print("==> Conv Type: {}".format(args.conv_type))
+    #print("==> BN Type: {}".format(args.bn_type))
 
     conv_layer = getattr(utils.conv_type, args.conv_type)
     bn_layer = getattr(utils.bn_type, args.bn_type)
