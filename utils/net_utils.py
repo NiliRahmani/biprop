@@ -152,12 +152,12 @@ def bn_weight_init(model,weight,bias):
                     print(f"==> Setting bias of {n} to {bias}")
 
 def set_model_prune_rate(model, prune_rate):
-    print(f"==> Setting prune rate of network to {prune_rate}")
+    # print(f"==> Setting prune rate of network to {prune_rate}")
 
     for n, m in model.named_modules():
         if hasattr(m, "set_prune_rate"):
             m.set_prune_rate(prune_rate)
-            print(f"==> Setting prune rate of {n} to {prune_rate}")
+            # print(f"==> Setting prune ratae of {n} to {prune_rate}")
 
 
 def accumulate(model, f):
