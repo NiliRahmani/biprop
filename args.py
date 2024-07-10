@@ -19,6 +19,9 @@ def parse_arguments():
     parser.add_argument(
         "--results", help="result filepath", default="runs/indiv_results4.csv"
     )
+    parser.add_argument(
+        "--alphas", type=str, default=None, help="Comma-separated alpha values for each layer",
+    )
     parser.add_argument("--optimizer", help="Which optimizer to use", default="sgd")
     parser.add_argument("--set", help="name of dataset", type=str, default="ImageNet")
     parser.add_argument(
