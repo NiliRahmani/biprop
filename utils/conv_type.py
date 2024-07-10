@@ -60,7 +60,7 @@ class GetQuantnet_binary_old(autograd.Function):
 
 class GetQuantnet_binary(autograd.Function):
     @staticmethod
-    def forward(ctx, scores, weights, k):
+    def forward(ctx, scores, weights, k, alpha):
         # Get the subnetwork by sorting the scores and using the top k%
         out = scores.clone()
         _, idx = scores.flatten().sort()
@@ -74,7 +74,7 @@ class GetQuantnet_binary(autograd.Function):
         abs_wgt = torch.abs(weights.clone()) # Absolute value of original weights
         q_weight = abs_wgt * out # Remove pruned weights
         num_unpruned = int(k * scores.numel()) # Number of unpruned weights
-        alpha = torch.sum(q_weight) / num_unpruned # Compute alpha = || q_weight ||_1 / (number of unpruned weights)
+        ## alpha = torch.sum(q_weight) / num_unpruned # Compute alpha = || q_weight ||_1 / (number of unpruned weights)
 
         # Print and save alpha
         layer_name = f"GetQuantnet_binary_{weights.shape}"
@@ -95,7 +95,7 @@ class GetQuantnet_binary(autograd.Function):
         # Get absolute value of weights from saved ctx
         abs_wgt, = ctx.saved_tensors
         # send the gradient g times abs_wgt on the backward pass
-        return g * abs_wgt, None, None
+        return g * abs_wgt, None, None, None
 
 class SubnetConv(nn.Conv2d):
     def __init__(self, *args, **kwargs):
@@ -104,6 +104,7 @@ class SubnetConv(nn.Conv2d):
         self.scores = nn.Parameter(torch.Tensor(self.weight.size()))
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
       #  print ("subnet conv init: ", torch.isnan(self.scores).any())
+        self.alpha = None  # <=== Add an attribute for alpha
 
     def set_prune_rate(self, prune_rate):
         self.prune_rate = prune_rate
@@ -173,6 +174,7 @@ class GlobalSubnetConv(nn.Conv2d):
         self.scores = nn.Parameter(torch.Tensor(self.weight.size()))
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
       #  print ("subnet conv init: ", torch.isnan(self.scores).any())
+        self.alpha = None  # <=== Add an attribute for alpha
 
     def set_prune_rate(self, prune_rate):
         self.prune_rate = prune_rate
