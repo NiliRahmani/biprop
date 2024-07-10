@@ -395,6 +395,7 @@ def set_alphas(model, alphas):
     alpha_idx = 0
     for name, module in model.named_modules():
         if isinstance(module, (SubnetConv, GlobalSubnetConv)):
+            print(f'\n\n idx: {alpha_idx}, alpha: {alphas[alpha_idx]} \n\n')
             module.alpha = alphas[alpha_idx]  # <=== Set the alpha for the layer
             alpha_idx += 1
             
