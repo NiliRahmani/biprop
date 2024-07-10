@@ -106,7 +106,7 @@ def main_worker(args):
     print("Second model architecture created")
 
     # Load weights and scores for model2 from the checkpoint
-    checkpoint_path = '/content/biprop/model_best_conv4_prune20.pth'
+    checkpoint_path = '/content/drive/MyDrive/Colab Models/model_best (5).pth'
     if os.path.isfile(checkpoint_path):
         print(f"=> Loading checkpoint for model2 from '{checkpoint_path}'")
         checkpoint = torch.load(checkpoint_path)
