@@ -82,12 +82,15 @@ def main():
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)
-# Set to make training deterministic for seed
+        # Set to make training deterministic for seed
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
     args.distributed = False
 
+    # Parse alphas
+    if args.alphas is not None:
+        args.alphas = list(map(float, args.alphas.split(',')))
     # Simply call main_worker function
     main_worker(args)
 
@@ -128,6 +131,8 @@ def main_worker(args):
     model2 = set_gpu(args, model2)
     print("Second model moved to GPU")
 
+    if args.alphas is not None:
+        set_alphas(model2, args.alphas)  # <=== Set alphas in the model
     #=================================
     data, train_augmentation = get_dataset(args)
 
@@ -386,7 +391,13 @@ def main_worker(args):
     #     run_base_dir=run_base_dir,
     # )
 
-
+def set_alphas(model, alphas):
+    alpha_idx = 0
+    for name, module in model.named_modules():
+        if isinstance(module, (SubnetConv, GlobalSubnetConv)):
+            module.alpha = alphas[alpha_idx]  # <=== Set the alpha for the layer
+            alpha_idx += 1
+            
 def get_trainer(args):
     print(f"=> Using trainer from trainers.{args.trainer}")
     trainer = importlib.import_module(f"trainers.{args.trainer}")
