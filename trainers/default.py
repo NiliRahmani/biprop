@@ -260,8 +260,8 @@ def validate(val_loader, model, criterion, args, writer, epoch):
     results['epoch'] = epoch
     results['acc1'] = acc1_value
 
-    # Save results to JSON file
-    save_results_to_json('/content/drive/MyDrive/Colab_Results/validation_results.json', results)
+    # # Save results to JSON file
+    # save_results_to_json('/content/drive/MyDrive/Colab_Results/validation_results.json', results)
 
     return top1.avg, top5.avg
 
