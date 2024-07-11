@@ -3,6 +3,7 @@ import pathlib
 import random
 import time
 import pickle
+import ast
 from torchsummary import summary
         
 from torch.utils.tensorboard import SummaryWriter
@@ -90,7 +91,8 @@ def main():
 
     # Parse alphas
     if args.alphas is not None:
-        args.alphas = list(map(float, args.alphas.split(',')))
+        args.alphas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')]
+    
     # Simply call main_worker function
     main_worker(args)
 
@@ -102,8 +104,6 @@ def main_worker(args):
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
 
-
-    #=================================
     # Initialize the second model
     model2 = get_model(args)
     print("Second model architecture created")
@@ -131,9 +131,6 @@ def main_worker(args):
     model2 = set_gpu(args, model2)
     print("Second model moved to GPU")
 
-    if args.alphas is not None:
-        set_alphas(model2, args.alphas)  # <=== Set alphas in the model
-    #=================================
     data, train_augmentation = get_dataset(args)
 
     if args.label_smoothing is None:
@@ -141,263 +138,29 @@ def main_worker(args):
     else:
         criterion = LabelSmoothing(smoothing=args.label_smoothing)
 
-    # optionally resume from a checkpoint
-    acc1 = 0.0
-    acc5 = 0.0
-    best_acc1 = 0.0
-    best_acc5 = 0.0
-    best_train_acc1 = 0.0
-    best_train_acc5 = 0.0
-
-  
     # Create the reproducible subset of train data
     train_loader = data.train_loader
     subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed)
 
-    # Data loading code
-    if 1: #args.evaluate:
-        # print("\nModel2 Summary:")
-        # summary(model2, (3, 32, 32))
-        
-        # acc1, acc5 = validate(
-        #     data.val_loader, model, criterion, args, writer=None, epoch=args.start_epoch
-        # )
-                # Evaluate model2 on the subset of train set
+    # Evaluate model2 on the subset of train set for each set of alphas
+    acc_list = []
+    for alphas in args.alphas:
+        set_alphas(model2, alphas)
         acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
-        print(f"Subset Train - Acc@1: {acc1_2}, Acc@5: {acc5_2}")
+        acc_list.append(acc1_2)
+    print(f"Subset Accuracy: {acc_list}")
 
-        return
-
-    # Set up directories
-    run_base_dir, ckpt_base_dir, log_base_dir = get_directories(args)
-    args.ckpt_base_dir = ckpt_base_dir
-
-    print("RUN DIR: ", run_base_dir)
-
-    writer = SummaryWriter(log_dir=log_base_dir)
-    epoch_time = AverageMeter("epoch_time", ":.4f", write_avg=False)
-    validation_time = AverageMeter("validation_time", ":.4f", write_avg=False)
-    train_time = AverageMeter("train_time", ":.4f", write_avg=False)
-    progress_overall = ProgressMeter(
-        1, [epoch_time, validation_time, train_time], prefix="Overall Timing"
-    )
-
-    end_epoch = time.time()
-    args.start_epoch = args.start_epoch or 0
-    acc1 = None
-
-    # # Save the initial state
-    # save_checkpoint(
-    #     {
-    #         "epoch": 0,
-    #         "arch": args.arch,
-    #         "state_dict": model.state_dict(),
-    #         "best_acc1": best_acc1,
-    #         "best_acc5": best_acc5,
-    #         "best_train_acc1": best_train_acc1,
-    #         "best_train_acc5": best_train_acc5,
-    #         "optimizer": optimizer.state_dict(),
-    #         "curr_acc1": acc1 if acc1 else "Not evaluated",
-    #         "conv_type": args.conv_type,
-    #         "prune_rate": args.prune_rate,
-    #         "train_augmentation": train_augmentation,
-    #         "use_augmix": args.augmix,
-    #         "jsd": args.jsd,
-    #         "augmix_mixture_width": args.mixture_width,
-    #         "augmix_mixture_depth": args.mixture_depth,
-    #         "augmix_severity": args.aug_severity,
-    #         "use_gaussian_aug": args.gaussian_aug,
-    #         "p_clean": args.p_clean,
-    #         "std_gauss": args.std_gauss,
-    #     },
-    #     False,
-    #     filename=ckpt_base_dir / f"initial.state",
-    #     save=False,
-    # )
-
-    # # Set final_prune_rate for gradually increasing pruning rate in global pruning
-    # final_prune_rate = args.prune_rate
-
-    # # Start training
-    # # torch.cuda.empty_cache()
-    # for epoch in range(args.start_epoch, args.epochs):
-
-    #     # If using global pruning, gradually increase pruning rate to avoid layer collapse
-    #     if args.conv_type == "GlobalSubnetConv" and epoch < args.prune_rate_epoch:
-    #       if args.prune_rate <= 0.5:
-    #          prune_decay = (1 - (epoch/args.prune_rate_epoch))**3
-    #          curr_prune_rate = (1-final_prune_rate) + ((0.5 - (1-final_prune_rate))*prune_decay)
-    #          args.prune_rate = (1-curr_prune_rate)
-    #          print("args.prune_rate = ", args.prune_rate)
-    #     elif args.conv_type == "GlobalSubnetConv" and epoch == args.prune_rate_epoch:
-    #       args.prune_rate = final_prune_rate
-    #       print("args.prune_rate = ", args.prune_rate)
-
-
-    #     lr_policy(epoch, iteration=None)
-    #     modifier(args, epoch, model)
-
-    #     cur_lr = get_lr(optimizer)
-    #     # torch.nn.utils.clip_grad_value_(model.parameters(),2)
-
-    #     # train for one epoch
-    #     start_train = time.time()
-    #     train_acc1, train_acc5 = train(
-    #         data.train_loader, model, criterion, optimizer, epoch, args, writer=writer
-    #     )
-    #     train_time.update((time.time() - start_train) / 60)
-
-    #     # evaluate on validation set
-    #     start_validation = time.time()
-    #     acc1, acc5 = validate(data.val_loader, model, criterion, args, writer, epoch)
-    #     validation_time.update((time.time() - start_validation) / 60)
-
-    #     # remember best acc@1 and save checkpoint
-    #     is_best = acc1 > best_acc1
-    #     best_acc1 = max(acc1, best_acc1)
-    #     best_acc5 = max(acc5, best_acc5)
-    #     best_train_acc1 = max(train_acc1, best_train_acc1)
-    #     best_train_acc5 = max(train_acc5, best_train_acc5)
-
-    #     if best_acc1 < 2 and epoch > 1:
-    #        raise SystemExit("Terminating early: Network is not learning") 
-
-    #     save = ((epoch % args.save_every) == 0) and args.save_every > 0
-    #     if is_best or save or epoch == args.epochs - 1:
-    #         if is_best:
-    #             print(f"==> New best {best_acc1}, saving at {ckpt_base_dir / 'model_best.pth'}")
-
-    #         save_checkpoint(
-    #             {
-    #                 "epoch": epoch + 1,
-    #                 "arch": args.arch,
-    #                 "state_dict": model.state_dict(),
-    #                 "best_acc1": best_acc1,
-    #                 "best_acc5": best_acc5,
-    #                 "best_train_acc1": best_train_acc1,
-    #                 "best_train_acc5": best_train_acc5,
-    #                 "optimizer": optimizer.state_dict(),
-    #                 "curr_acc1": acc1,
-    #                 "curr_acc5": acc5,
-    #                 "conv_type": args.conv_type,
-    #                 "prune_rate": args.prune_rate,
-    #                 "train_augmentation": train_augmentation,
-    #                 "use_augmix": args.augmix,
-    #                 "jsd": args.jsd,
-    #                 "augmix_mixture_width": args.mixture_width,
-    #                 "augmix_mixture_depth": args.mixture_depth,
-    #                 "augmix_severity": args.aug_severity,
-    #                 "use_gaussian_aug": args.gaussian_aug,
-    #                 "p_clean": args.p_clean,
-    #                 "std_gauss": args.std_gauss,
-    #             },
-    #             is_best,
-    #             filename=ckpt_base_dir / f"epoch_most_recent.state",
-    #             save=save,
-    #         )
-
-    #         save_checkpoint(
-    #             {
-    #                 "epoch": epoch + 1,
-    #                 "arch": args.arch,
-    #                 "state_dict": model.state_dict(),
-    #                 "best_acc1": best_acc1,
-    #                 "best_acc5": best_acc5,
-    #                 "best_train_acc1": best_train_acc1,
-    #                 "best_train_acc5": best_train_acc5,
-    #                 "optimizer": optimizer.state_dict(),
-    #                 "curr_acc1": acc1,
-    #                 "curr_acc5": acc5,
-    #                 "conv_type": args.conv_type,
-    #                 "prune_rate": args.prune_rate,
-    #                 "train_augmentation": train_augmentation,
-    #                 "use_augmix": args.augmix,
-    #                 "jsd": args.jsd,
-    #                 "augmix_mixture_width": args.mixture_width,
-    #                 "augmix_mixture_depth": args.mixture_depth,
-    #                 "augmix_severity": args.aug_severity,
-    #                 "use_gaussian_aug": args.gaussian_aug,
-    #                 "p_clean": args.p_clean,
-    #                 "std_gauss": args.std_gauss,
-    #             },
-    #             is_best,
-    #             filename=ckpt_base_dir / f"epoch_{epoch}.state",
-    #             save=save,
-    #         )
-    #         #filename=ckpt_base_dir / f"epoch_{epoch}.state",
-
-    #     epoch_time.update((time.time() - end_epoch) / 60)
-    #     progress_overall.display(epoch)
-    #     progress_overall.write_to_tensorboard(
-    #         writer, prefix="diagnostics", global_step=epoch
-    #     )
-
-    #     if args.conv_type == "SampleSubnetConv":
-    #         count = 0
-    #         sum_pr = 0.0
-    #         for n, m in model.named_modules():
-    #             if isinstance(m, SampleSubnetConv):
-    #                 # avg pr across 10 samples
-    #                 pr = 0.0
-    #                 for _ in range(10):
-    #                     pr += (
-    #                         (torch.rand_like(m.clamped_scores) >= m.clamped_scores)
-    #                         .float()
-    #                         .mean()
-    #                         .item()
-    #                     )
-    #                 pr /= 10.0
-    #                 writer.add_scalar("pr/{}".format(n), pr, epoch)
-    #                 sum_pr += pr
-    #                 count += 1
-
-    #         args.prune_rate = sum_pr / count
-    #         writer.add_scalar("pr/average", args.prune_rate, epoch)
-
-    #     writer.add_scalar("test/lr", cur_lr, epoch)
-    #     end_epoch = time.time()
-    #     #print("EPOCH TIME: ", end_epoch-start_train)
-    #     #torch.cuda.empty_cache()
-
-    # # Finalize prune rate for globally pruned networks
-    # if args.conv_type == "GlobalSubnetConv":
-    #   global_pr, prune_dict = global_prune_rate(model, args)
-    #   # Save prune rate dictionary to file in checkpoint directory
-    #   dict_filename=f"{ckpt_base_dir}/global_prune_rate_dictionary.pkl"
-    #   with open(dict_filename, 'wb') as f:
-    #     pickle.dump(prune_dict, f)
-    # else:
-    #   # For layerwise pruning, global prune rate is layer prune rate
-    #   global_pr = args.prune_rate
-
-    # #print("BEST ACC 1: ", best_acc1)
-    # write_result_to_csv(
-    #     best_acc1=best_acc1,
-    #     best_acc5=best_acc5,
-    #     best_train_acc1=best_train_acc1,
-    #     best_train_acc5=best_train_acc5,
-    #     prune_rate=args.prune_rate,
-    #     curr_acc1=acc1,
-    #     curr_acc5=acc5,
-    #     base_config=args.config,
-    #     seed=args.seed,
-    #     name=args.name,
-    #     lr=args.lr,
-    #     weight_decay=args.weight_decay,
-    #     epochs=args.epochs,
-    #     learn_bn=args.learn_batchnorm,
-    #     tune_bn=args.tune_batchnorm,
-    #     bias_only=args.bn_bias_only,
-    #     run_base_dir=run_base_dir,
-    # )
+    # Print the accuracies as a string to be captured by the subprocess
+    print(f"Subset Accuracy: {acc_list}")  # ;;;;;
 
 def set_alphas(model, alphas):
     alpha_idx = 0
     for name, module in model.named_modules():
         if isinstance(module, (SubnetConv, GlobalSubnetConv)):
-            # print(f'\n\n idx: {alpha_idx}, alpha: {alphas[alpha_idx]} \n\n')
-            module.alpha = alphas[alpha_idx]  # <=== Set the alpha for the layer
+            module.alpha = alphas[alpha_idx]
             alpha_idx += 1
+
+
             
 def get_trainer(args):
     print(f"=> Using trainer from trainers.{args.trainer}")
@@ -450,34 +213,6 @@ def resume(args, model, optimizer):
         print(f"=> No checkpoint found at '{args.resume}'")
 
 
-# def pretrained(args, model):
-#     if os.path.isfile(args.pretrained):
-#         print("=> loading pretrained weights from '{}'".format(args.pretrained))
-#         pretrained = torch.load(
-#             args.pretrained,
-#             map_location=torch.device("cuda:{}".format(args.multigpu[0])),
-#         )["state_dict"]
-
-#         model_state_dict = model.state_dict()
-#         for k, v in pretrained.items():
-#             if k not in model_state_dict or v.size() != model_state_dict[k].size():
-#                 print("IGNORE:", k)
-#         pretrained = {
-#             k: v
-#             for k, v in pretrained.items()
-#             if (k in model_state_dict and v.size() == model_state_dict[k].size())
-#         }
-#         model_state_dict.update(pretrained)
-#         model.load_state_dict(model_state_dict)
-
-#     else:
-#         print("=> no pretrained weights found at '{}'".format(args.pretrained))
-
-#     for n, m in model.named_modules():
-#         if isinstance(m, FixedSubnetConv):
-#             m.set_subnet()
-
-
 def get_dataset(args):
     train_augmentation = 'Default'
     # Check if gaussian augmenation is being used
@@ -526,40 +261,6 @@ def get_model(args):
         freeze_model_weights(model)
 
     return model
-
-
-# def get_optimizer(args, model):
-#     for n, v in model.named_parameters():
-#         if v.requires_grad:
-#             print("<DEBUG> gradient to", n)
-
-#         if not v.requires_grad:
-#             print("<DEBUG> no gradient to", n)
-#     print("OPTIMIZER: ", args.optimizer)
-#     if args.optimizer == "sgd":
-#         parameters = list(model.named_parameters())
-#         bn_params = [v for n, v in parameters if ("bn" in n) and v.requires_grad]
-#         rest_params = [v for n, v in parameters if ("bn" not in n) and v.requires_grad]
-#         optimizer = torch.optim.SGD(
-#             [
-#                 {
-#                     "params": bn_params,
-#                     "weight_decay": 0 if args.no_bn_decay else args.weight_decay,
-#                 },
-#                 {"params": rest_params, "weight_decay": args.weight_decay},
-#             ],
-#             args.lr,
-#             momentum=args.momentum,
-#             weight_decay=args.weight_decay,
-#             nesterov=args.nesterov,
-#         )
-#     elif args.optimizer == "adam":
-#         optimizer = torch.optim.Adam(
-#             filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr
-#         )
-#     #print(list(model.parameters()))
-
-#     return optimizer
 
 
 def _run_dir_exists(run_base_dir):
@@ -704,20 +405,4 @@ def global_prune_rate(model, args):
 
 
 if __name__ == "__main__":
-    # import cProfile
-    # import pstats
-    # from io import StringIO
-
-    # pr = cProfile.Profile()
-    # pr.enable()
-
     main()
-
-    # pr.disable()
-    # s = StringIO()
-    # sortby = 'cumulative'
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # with open("profile_output.txt", "w") as f:
-    #     f.write(s.getvalue())
-
