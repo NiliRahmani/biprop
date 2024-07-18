@@ -92,6 +92,10 @@ def main():
     # Parse alphas
     if args.alphas is not None:
         args.alphas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')]
+
+    if args.betas is not None:  # lllllllllllll
+        args.betas = [list(map(float, beta_group.split(','))) for beta_group in args.betas.split(';')]  # lllllllllllll
+
     
     # Simply call main_worker function
     main_worker(args)
