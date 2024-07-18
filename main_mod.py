@@ -146,22 +146,43 @@ def main_worker(args):
     train_loader = data.train_loader
     subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed)
 
-    # Evaluate model2 on the subset of train set for each set of alphas
+    # # Evaluate model2 on the subset of train set for each set of alphas
+    # acc_list = []
+    # for alphas in args.alphas:
+    #     set_alphas(model2, alphas)
+    #     acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+    #     acc_list.append(acc1_2)
+    # print(f"Subset Accuracy: {acc_list}")
+
+    # Evaluate model2 on the subset of train set for each set of alphas (and betas if provided)
     acc_list = []
-    for alphas in args.alphas:
-        set_alphas(model2, alphas)
-        acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
-        acc_list.append(acc1_2)
+    if args.betas is not None:  # lllllllllllll
+        for alphas, betas in zip(args.alphas, args.betas):  # lllllllllllll
+            set_alphas_betas(model2, alphas, betas)  # lllllllllllll
+            acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc_list.append(acc1_2)
+    else:  # lllllllllllll
+        for alphas in args.alphas:  # lllllllllllll
+            set_alphas_betas(model2, alphas)  # lllllllllllll
+            acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc_list.append(acc1_2)
     print(f"Subset Accuracy: {acc_list}")
 
-    # Print the accuracies as a string to be captured by the subprocess
-    print(f"Subset Accuracy: {acc_list}")  # ;;;;;
 
-def set_alphas(model, alphas):
+
+# def set_alphas(model, alphas):
+#     alpha_idx = 0
+#     for name, module in model.named_modules():
+#         if isinstance(module, (SubnetConv, GlobalSubnetConv)):
+#             module.alpha = alphas[alpha_idx]
+#             alpha_idx += 1
+def set_alphas_betas(model, alphas, betas=None):  # lllllllllllll
     alpha_idx = 0
     for name, module in model.named_modules():
         if isinstance(module, (SubnetConv, GlobalSubnetConv)):
-            module.alpha = alphas[alpha_idx]
+            module.alpha = alphas[alpha_idx]  # lllllllllllll
+            if betas is not None:  # lllllllllllll
+                module.beta = betas[alpha_idx]  # lllllllllllll
             alpha_idx += 1
 
 
