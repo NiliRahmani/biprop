@@ -19,6 +19,11 @@ def parse_arguments():
     parser.add_argument(
         "--alphas", type=str, default=None, help="Comma-separated alpha values for each layer",
     )
+
+    parser.add_argument(
+    "--betas", default=None, type=str, help="Beta values for each layer"
+    )
+
     parser.add_argument(
         "--results", help="result filepath", default="runs/indiv_results4.csv"
     )
