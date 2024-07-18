@@ -60,7 +60,7 @@ class GetQuantnet_binary_old(autograd.Function):
 
 class GetQuantnet_binary(autograd.Function):
     @staticmethod
-    def forward(ctx, scores, weights, k, alpha):
+    def forward(ctx, scores, weights, k, alpha,  beta=None):
         # Get the subnetwork by sorting the scores and using the top k%
         out = scores.clone()
         _, idx = scores.flatten().sort()
@@ -93,15 +93,18 @@ class GetQuantnet_binary(autograd.Function):
         # Save absolute value of weights for backward
         ctx.save_for_backward(abs_wgt)
 
-        # Return pruning mask with gain term alpha for binary weights
-        return alpha * out
+        # Return pruning mask with gain term alpha and beta for binary weights
+        if beta is not None:  # lllllllllllll
+            return alpha * (weights > 0).float() * out + beta * (weights <= 0).float() * out  # lllllllllllll
+        else:  # lllllllllllll
+            return alpha * out  # lllllllllllll
 
     @staticmethod
     def backward(ctx, g):
         # Get absolute value of weights from saved ctx
         abs_wgt, = ctx.saved_tensors
         # send the gradient g times abs_wgt on the backward pass
-        return g * abs_wgt, None, None, None
+        return g * abs_wgt, None, None, None, None
 
 class SubnetConv(nn.Conv2d):
     def __init__(self, *args, **kwargs):
@@ -111,6 +114,7 @@ class SubnetConv(nn.Conv2d):
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
       #  print ("subnet conv init: ", torch.isnan(self.scores).any())
         self.alpha = None  # <=== Add an attribute for alpha
+        self.beta = None  # <=== Add an attribute for beta
 
     def set_prune_rate(self, prune_rate):
         self.prune_rate = prune_rate
@@ -125,12 +129,14 @@ class SubnetConv(nn.Conv2d):
         if parser_args.debug:
             if quantnet.grad: print ("subnetconv fwd quantnet grad ", torch.max(quantnet.grad))
         
-        if hasattr(self, 'alpha'):
-            alpha = self.alpha  # <=== Use alpha if set
+        if hasattr(self, 'alpha'):  # lllllllllllll
+            alpha = self.alpha  # lllllllllllll
+            beta = self.beta if hasattr(self, 'beta') else None  # lllllllllllll
         else:
             alpha = self.prune_rate  # fallback to prune_rate if alpha not set
+            beta = None  # lllllllllllll
         # Get binary mask and gain term for subnetwork
-        quantnet = GetQuantnet_binary.apply(self.clamped_scores, self.weight, self.prune_rate, alpha)
+        quantnet = GetQuantnet_binary.apply(self.clamped_scores, self.weight, self.prune_rate, alpha, beta)  # lllllllllllll
         # Binarize weights by taking sign, multiply by pruning mask and gain term (alpha)
         w = torch.sign(self.weight) * quantnet
         # Pass binary subnetwork weights to convolution layer
