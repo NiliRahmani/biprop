@@ -90,9 +90,10 @@ def main():
 
     args.distributed = False
 
-    # Parse alphas
-    if args.alphas is not None:
-        args.alphas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')]
+if args.alphas is not None: #kkkkkkkkkk
+    alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')] #kkkkkkkkkk
+    args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas #kkkkkkkkkk
+
     
     # Simply call main_worker function
     main_worker(args)
@@ -142,8 +143,8 @@ def main_worker(args):
 
     # Evaluate model2 on the subset of train set for each set of alphas
     acc_list = []
-    for alphas in args.alphas:
-        set_alphas(model2, alphas)
+    for alphas, betas in args.alphas_betas: #kkkkkkkkkk
+        set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
         acc1, acc5 = validate(data.val_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
         acc_list.append(acc1)
     print(f"Subset Accuracy: {acc_list}")
@@ -154,12 +155,13 @@ def main_worker(args):
     df['test_acc'] = acc_list
     df.to_csv(results_path, index=False)
 
-def set_alphas(model, alphas):
-    alpha_idx = 0
-    for name, module in model.named_modules():
-        if isinstance(module, (SubnetConv, GlobalSubnetConv)):
-            module.alpha = alphas[alpha_idx]
-            alpha_idx += 1
+def set_alphas_betas(model, alphas, betas): #kkkkkkkkkk
+    alpha_idx = 0 #kkkkkkkkkk
+    for name, module in model.named_modules(): #kkkkkkkkkk
+        if isinstance(module, (SubnetConv, GlobalSubnetConv)): #kkkkkkkkkk
+            module.alpha = alphas[alpha_idx] #kkkkkkkkkk
+            module.beta = betas[alpha_idx] #kkkkkkkkkk
+            alpha_idx += 1 #kkkkkkkkkk
 
 
             
