@@ -90,9 +90,15 @@ def main():
 
     args.distributed = False
 
-if args.alphas is not None: #kkkkkkkkkk
-    alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')] #kkkkkkkkkk
-    args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas #kkkkkkkkkk
+    if args.alphas is not None: #kkkkkkkkkk
+            alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')] #kkkkkkkkkk
+            if all(len(ab) == len(alphas_betas[0]) for ab in alphas_betas): #kkkkkkkkkk
+                if len(alphas_betas[0]) % 2 == 0: #kkkkkkkkkk
+                    args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas #kkkkkkkkkk
+                else: #kkkkkkkkkk
+                    args.alphas = alphas_betas # Only alphas case #kkkkkkkkkk
+            else: #kkkkkkkkkk
+                raise ValueError("All alpha-beta pairs must have the same length") #kkkkkkkkkk
 
     
     # Simply call main_worker function
@@ -141,13 +147,20 @@ def main_worker(args):
         criterion = LabelSmoothing(smoothing=args.label_smoothing)
 
 
-    # Evaluate model2 on the subset of train set for each set of alphas
-    acc_list = []
-    for alphas, betas in args.alphas_betas: #kkkkkkkkkk
-        set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
-        acc1, acc5 = validate(data.val_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
-        acc_list.append(acc1)
-    print(f"Subset Accuracy: {acc_list}")
+    # Evaluate model2 on the subset of train set for each set of alphas #kkkkkkkkkk
+    acc_list = [] #kkkkkkkkkk
+    if hasattr(args, 'alphas_betas'): #kkkkkkkkkk
+        for alphas, betas in args.alphas_betas: #kkkkkkkkkk
+            set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
+            acc1, acc5 = validate(data.val_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc_list.append(acc1)
+    elif hasattr(args, 'alphas'): #kkkkkkkkkk
+        for alphas in args.alphas: #kkkkkkkkkk
+            set_alphas(model2, alphas) #kkkkkkkkkk
+            acc1, acc5 = validate(data.val_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc_list.append(acc1)
+    print(f"Subset Accuracy: {acc_list}") #kkkkkkkkkk
+
 
     # Save the accuracies to a CSV file
     results_path = '/content/drive/MyDrive/Colab_Results/biprop results/Results_vgg_small.csv'
@@ -155,13 +168,13 @@ def main_worker(args):
     df['test_acc'] = acc_list
     df.to_csv(results_path, index=False)
 
-def set_alphas_betas(model, alphas, betas): #kkkkkkkkkk
+def set_alphas(model, alphas): #kkkkkkkkkk
     alpha_idx = 0 #kkkkkkkkkk
     for name, module in model.named_modules(): #kkkkkkkkkk
         if isinstance(module, (SubnetConv, GlobalSubnetConv)): #kkkkkkkkkk
             module.alpha = alphas[alpha_idx] #kkkkkkkkkk
-            module.beta = betas[alpha_idx] #kkkkkkkkkk
             alpha_idx += 1 #kkkkkkkkkk
+
 
 
             
