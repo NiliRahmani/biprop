@@ -41,7 +41,7 @@ import models
 
 import numpy as np
 
-def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42):
+def get_reproducible_train_subset(train_loader, subset_size=5000, seed=42):
     np.random.seed(seed)
     indices = np.random.choice(len(train_loader.dataset), subset_size, replace=False)
     subset_sampler = torch.utils.data.SubsetRandomSampler(indices)
