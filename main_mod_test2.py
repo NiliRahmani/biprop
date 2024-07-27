@@ -92,7 +92,8 @@ def main():
 
     if args.alphas_file:  # $$$$
         df = pd.read_csv(args.alphas_file)  # $$$$
-        alphas_list = df[['Alpha_' + str(i) for i in range(1, df.shape[1] + 1)]].values.tolist()  # $$$$
+        alphas_columns = ['Alpha_' + str(i) for i in range(1, 10)]  # Match the exact number of alpha columns  # $$$$
+        alphas_list = df[alphas_columns].values.tolist()  # $$$$
         alphas_str = ';'.join([','.join(map(str, alphas)) for alphas in alphas_list])  # $$$$
         alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in alphas_str.split(';')]  # $$$$
         if all(len(ab) == len(alphas_betas[0]) for ab in alphas_betas):  # $$$$
