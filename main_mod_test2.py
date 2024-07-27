@@ -90,15 +90,19 @@ def main():
 
     args.distributed = False
 
-    if args.alphas is not None: #kkkkkkkkkk
-            alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in args.alphas.split(';')] #kkkkkkkkkk
-            if all(len(ab) == len(alphas_betas[0]) for ab in alphas_betas): #kkkkkkkkkk
-                if len(alphas_betas[0]) % 2 == 0: #kkkkkkkkkk
-                    args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas #kkkkkkkkkk
-                else: #kkkkkkkkkk
-                    args.alphas = alphas_betas # Only alphas case #kkkkkkkkkk
-            else: #kkkkkkkkkk
-                raise ValueError("All alpha-beta pairs must have the same length") #kkkkkkkkkk
+    if args.alphas_file:  # $$$$
+        df = pd.read_csv(args.alphas_file)  # $$$$
+        alphas_list = df[['Alpha_' + str(i) for i in range(1, df.shape[1] + 1)]].values.tolist()  # $$$$
+        alphas_str = ';'.join([','.join(map(str, alphas)) for alphas in alphas_list])  # $$$$
+        alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in alphas_str.split(';')]  # $$$$
+        if all(len(ab) == len(alphas_betas[0]) for ab in alphas_betas):  # $$$$
+            if len(alphas_betas[0]) % 2 == 0:  # $$$$
+                args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas  # $$$$
+            else:  # $$$$
+                args.alphas = alphas_betas  # Only alphas case  # $$$$
+        else:  # $$$$
+            raise ValueError("All alpha-beta pairs must have the same length")  # $$$$
+
 
     
     # Simply call main_worker function
