@@ -41,7 +41,7 @@ import models
 
 import numpy as np
 
-def get_reproducible_train_subset(train_loader, subset_size=5000, seed=42):
+def get_reproducible_train_subset(train_loader, subset_size=10000, seed=42):
     np.random.seed(seed)
     indices = np.random.choice(len(train_loader.dataset), subset_size, replace=False)
     subset_sampler = torch.utils.data.SubsetRandomSampler(indices)
@@ -144,7 +144,7 @@ def main_worker(args):
 
     # Create the reproducible subset of train data
     train_loader = data.train_loader
-    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed)
+    subset_loader = get_reproducible_train_subset(train_loader, subset_size=5000, seed=args.seed)
 
     # # Evaluate model2 on the subset of train set for each set of alphas
     # acc_list = []
