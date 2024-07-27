@@ -8,7 +8,6 @@ from configs import parser as _parser
 
 args = None
 
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
 
@@ -19,6 +18,10 @@ def parse_arguments():
     parser.add_argument(
         "--alphas", type=str, default=None, help="Comma-separated alpha values for each layer",
     )
+    
+    # Add this line for the alphas CSV file path
+    parser.add_argument('--alphas-file', default='', type=str, help='Path to CSV file containing alphas')  # $$$$
+    
 
     parser.add_argument(
     "--betas", default=None, type=str, help="Beta values for each layer"
