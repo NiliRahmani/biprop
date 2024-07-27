@@ -91,18 +91,19 @@ def main():
     args.distributed = False
 
     if args.alphas_file:  # $$$$
-        df = pd.read_csv(args.alphas_file)  # $$$$
-        alphas_columns = ['Alpha_' + str(i) for i in range(1, 10)]  # Match the exact number of alpha columns  # $$$$
-        alphas_list = df[alphas_columns].values.tolist()  # $$$$
-        alphas_str = ';'.join([','.join(map(str, alphas)) for alphas in alphas_list])  # $$$$
-        alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in alphas_str.split(';')]  # $$$$
-        if all(len(ab) == len(alphas_betas[0]) for ab in alphas_betas):  # $$$$
-            if len(alphas_betas[0]) % 2 == 0:  # $$$$
-                args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas  # $$$$
+            df = pd.read_csv(args.alphas_file)  # $$$$
+            alphas_columns = ['Alpha_' + str(i) for i in range(1, 10)]  # $$$$
+            alphas_list = df[alphas_columns].values.tolist()  # $$$$
+            alphas_str = ';'.join([','.join(map(str, alphas)) for alphas in alphas_list])  # $$$$
+            alphas_betas = [list(map(float, alpha_group.split(','))) for alpha_group in alphas_str.split(';')]  # $$$$
+            if all(len(ab) == len(alphas_betas[0]) for ab in alphas_betas):  # $$$$
+                if len(alphas_betas[0]) % 2 == 0:  # $$$$
+                    args.alphas_betas = [(alphas_betas[i][::2], alphas_betas[i][1::2]) for i in range(len(alphas_betas))]  # Separate alphas and betas  # $$$$
+                else:  # $$$$
+                    args.alphas = alphas_betas  # Only alphas case  # $$$$
             else:  # $$$$
-                args.alphas = alphas_betas  # Only alphas case  # $$$$
-        else:  # $$$$
-            raise ValueError("All alpha-beta pairs must have the same length")  # $$$$
+                raise ValueError("All alpha-beta pairs must have the same length")  # $$$$
+
 
 
     
