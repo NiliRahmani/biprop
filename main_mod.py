@@ -52,19 +52,35 @@ def load_used_indices(filepath):
     else:
         return set()
 
+def reset_used_indices(filepath):
+    if os.path.exists(filepath):
+        os.remove(filepath)
 
+
+# Function to get a reproducible train subset
 def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_indices_filepath="used_indices.pkl"):
     np.random.seed(seed)
     total_indices = set(range(len(train_loader.dataset)))
     used_indices = load_used_indices(used_indices_filepath)
     available_indices = list(total_indices - used_indices)
 
+    # Print statements for debugging
+    print(f"Total dataset size: {len(total_indices)}")
+    print(f"Used indices so far: {len(used_indices)}")
+    print(f"Available indices: {len(available_indices)}")
+
+    # If not enough available indices, reset used indices and recalculate
     if len(available_indices) < subset_size:
-        raise ValueError("Not enough available indices to create a new subset")
+        print("Not enough available indices, resetting used indices.")
+        reset_used_indices(used_indices_filepath)
+        used_indices = set()
+        available_indices = list(total_indices)
 
     new_indices = np.random.choice(available_indices, subset_size, replace=False)
     used_indices.update(new_indices)
     save_used_indices(used_indices, used_indices_filepath)
+
+    print(f"New subset indices: {new_indices[:10]}...")  # Print the first 10 new indices for verification
 
     subset_sampler = torch.utils.data.SubsetRandomSampler(new_indices)
     subset_loader = torch.utils.data.DataLoader(
@@ -75,7 +91,6 @@ def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_
         pin_memory=True,
     )
     return subset_loader
-
 
 
 # Step 1: Load the pre-trained model
