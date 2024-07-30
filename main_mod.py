@@ -41,40 +41,44 @@ import models
 
 import numpy as np
 
-def save_used_indices(indices, filepath):
-    with open(filepath, 'wb') as f:
-        pickle.dump(indices, f)
+import numpy as np
+import torch
+import pickle
 
 def load_used_indices(filepath):
-    if os.path.exists(filepath):
-        with open(filepath, 'rb') as f:
-            return pickle.load(f)
-    else:
+    try:
+        with open(filepath, "rb") as f:
+            return set(pickle.load(f))
+    except FileNotFoundError:
         return set()
 
+def save_used_indices(indices, filepath):
+    with open(filepath, "wb") as f:
+        pickle.dump(indices, f)
+
 def reset_used_indices(filepath):
-    if os.path.exists(filepath):
-        os.remove(filepath)
+    with open(filepath, "wb") as f:
+        pickle.dump(set(), f)
 
-
-# Function to get a reproducible train subset
-def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_indices_filepath="used_indices.pkl"):
+def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_indices_filepath="used_indices.pkl", val_indices_filepath="val_indices.pkl"):
     np.random.seed(seed)
     total_indices = set(range(len(train_loader.dataset)))
     used_indices = load_used_indices(used_indices_filepath)
-    available_indices = list(total_indices - used_indices)
-
-    # Print statements for debugging
+    
+    with open(val_indices_filepath, "rb") as f:
+        val_indices = set(pickle.load(f))
+    
+    available_indices = list(total_indices - used_indices - val_indices)
+    
     print(f"Total dataset size: {len(total_indices)}")
     print(f"Used indices so far: {len(used_indices)}")
     print(f"Available indices: {len(available_indices)}")
 
-    # If not enough available indices, reset used indices and recalculate
     if len(available_indices) < subset_size:
         print("Not enough available indices, resetting used indices.")
         reset_used_indices(used_indices_filepath)
         used_indices = set()
-        available_indices = list(total_indices)
+        available_indices = list(total_indices - val_indices)
 
     new_indices = np.random.choice(available_indices, subset_size, replace=False)
     used_indices.update(new_indices)
@@ -83,6 +87,7 @@ def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_
     print(f"New subset indices: {new_indices[:10]}...")  # Print the first 10 new indices for verification
 
     subset_sampler = torch.utils.data.SubsetRandomSampler(new_indices)
+    
     subset_loader = torch.utils.data.DataLoader(
         train_loader.dataset,
         batch_size=train_loader.batch_size,
@@ -91,7 +96,6 @@ def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_
         pin_memory=True,
     )
     return subset_loader
-
 
 # Step 1: Load the pre-trained model
 def load_model(checkpoint_path, model_class):
@@ -182,7 +186,7 @@ def main_worker(args):
 
     # Create the reproducible subset of train data
     train_loader = data.train_loader
-    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl")
+    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl", val_indices_filepath="val_indices.pkl")
 
     # # Evaluate model2 on the subset of train set for each set of alphas
     # acc_list = []
