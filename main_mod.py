@@ -41,10 +41,32 @@ import models
 
 import numpy as np
 
-def get_reproducible_train_subset(train_loader, subset_size=10000, seed=42):
+def save_used_indices(indices, filepath):
+    with open(filepath, 'wb') as f:
+        pickle.dump(indices, f)
+
+def load_used_indices(filepath):
+    if os.path.exists(filepath):
+        with open(filepath, 'rb') as f:
+            return pickle.load(f)
+    else:
+        return set()
+
+
+def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_indices_filepath="used_indices.pkl"):
     np.random.seed(seed)
-    indices = np.random.choice(len(train_loader.dataset), subset_size, replace=False)
-    subset_sampler = torch.utils.data.SubsetRandomSampler(indices)
+    total_indices = set(range(len(train_loader.dataset)))
+    used_indices = load_used_indices(used_indices_filepath)
+    available_indices = list(total_indices - used_indices)
+
+    if len(available_indices) < subset_size:
+        raise ValueError("Not enough available indices to create a new subset")
+
+    new_indices = np.random.choice(available_indices, subset_size, replace=False)
+    used_indices.update(new_indices)
+    save_used_indices(used_indices, used_indices_filepath)
+
+    subset_sampler = torch.utils.data.SubsetRandomSampler(new_indices)
     subset_loader = torch.utils.data.DataLoader(
         train_loader.dataset,
         batch_size=train_loader.batch_size,
@@ -53,6 +75,7 @@ def get_reproducible_train_subset(train_loader, subset_size=10000, seed=42):
         pin_memory=True,
     )
     return subset_loader
+
 
 
 # Step 1: Load the pre-trained model
@@ -144,7 +167,7 @@ def main_worker(args):
 
     # Create the reproducible subset of train data
     train_loader = data.train_loader
-    subset_loader = get_reproducible_train_subset(train_loader, subset_size=5000, seed=args.seed)
+    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl")
 
     # # Evaluate model2 on the subset of train set for each set of alphas
     # acc_list = []
