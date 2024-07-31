@@ -186,7 +186,7 @@ def main_worker(args):
 
     # Create the reproducible subset of train data
     train_loader = data.train_loader
-    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl", val_indices_filepath="val_indices.pkl")
+    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl", val_indices_filepath="/content/biprop/val_indices.pkl")
 
     # # Evaluate model2 on the subset of train set for each set of alphas
     # acc_list = []
