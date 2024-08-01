@@ -184,7 +184,7 @@ def main_worker(args):
     # Save the accuracies to a CSV file
     results_path = '/content/drive/MyDrive/Colab_Results/biprop results/Results_vgg_small.csv'
     df = pd.read_csv(results_path)
-    df['test_acc'] = acc_list
+    df['val_acc'] = acc_list
     df.to_csv(results_path, index=False)
 
 def set_alphas(model, alphas): #kkkkkkkkkk
