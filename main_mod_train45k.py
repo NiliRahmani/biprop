@@ -295,10 +295,12 @@ def get_dataset(args):
 
     print(f"=> Getting {args.set} dataset")
 
-    # Define any transformations
+    # Define the transformations (same as those in data module)
     transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        # Add other transformations here
+        transforms.Normalize(mean=[0.491, 0.482, 0.447], std=[0.247, 0.243, 0.262]),
     ])
 
     # Load the CIFAR10 dataset
