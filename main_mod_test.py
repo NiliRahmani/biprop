@@ -233,25 +233,29 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
+from torch.utils.data import DataLoader
+
 def get_dataset(args):
-    # Define the transformations (if needed)
+    # Define the normalization used for the test set (same as used in val_loader)
+    normalize = transforms.Normalize(mean=[0.491, 0.482, 0.447], std=[0.247, 0.243, 0.262])
+
+    # Define the transformations for the test set
     transform = transforms.Compose([
         transforms.ToTensor(),
-        # Add any additional transformations here
+        normalize,
     ])
 
-    # Load the test dataset
+    # Load the test dataset with the defined transformations
     print(f"=> Getting {args.set} test dataset")
-    test_set = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-
-    # Create DataLoader for the test set
+    test_set = datasets.CIFAR10(root=args.data, train=False, download=True, transform=transform)
+    
+    # Create the DataLoader for the test set
     test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
-
-    # No augmentation applied, so set train_augmentation to None
-    train_augmentation = None
-
-    # Return the test_loader instead of the full dataset
-    return test_loader, train_augmentation
+    
+    # Return only the test_loader
+    return test_loader, None
 
 
 def get_model(args):
