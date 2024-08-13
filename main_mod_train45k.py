@@ -61,42 +61,42 @@ def reset_used_indices(filepath):
     with open(filepath, "wb") as f:
         pickle.dump(set(), f)
 
-def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_indices_filepath="used_indices.pkl", val_indices_filepath="val_indices.pkl"):
-    np.random.seed(seed)
-    total_indices = set(range(len(train_loader.dataset)))
-    used_indices = load_used_indices(used_indices_filepath)
+# def get_reproducible_train_subset(train_loader, subset_size=2000, seed=42, used_indices_filepath="used_indices.pkl", val_indices_filepath="val_indices.pkl"):
+#     np.random.seed(seed)
+#     total_indices = set(range(len(train_loader.dataset)))
+#     used_indices = load_used_indices(used_indices_filepath)
     
-    with open(val_indices_filepath, "rb") as f:
-        val_indices = set(pickle.load(f))
+#     with open(val_indices_filepath, "rb") as f:
+#         val_indices = set(pickle.load(f))
     
-    available_indices = list(total_indices - used_indices - val_indices)
+#     available_indices = list(total_indices - used_indices - val_indices)
     
-    print(f"Total dataset size: {len(total_indices)}")
-    print(f"Used indices so far: {len(used_indices)}")
-    print(f"Available indices: {len(available_indices)}")
+#     print(f"Total dataset size: {len(total_indices)}")
+#     print(f"Used indices so far: {len(used_indices)}")
+#     print(f"Available indices: {len(available_indices)}")
 
-    if len(available_indices) < subset_size:
-        print("Not enough available indices, resetting used indices.")
-        reset_used_indices(used_indices_filepath)
-        used_indices = set()
-        available_indices = list(total_indices - val_indices)
+#     if len(available_indices) < subset_size:
+#         print("Not enough available indices, resetting used indices.")
+#         reset_used_indices(used_indices_filepath)
+#         used_indices = set()
+#         available_indices = list(total_indices - val_indices)
 
-    new_indices = np.random.choice(available_indices, subset_size, replace=False)
-    used_indices.update(new_indices)
-    save_used_indices(used_indices, used_indices_filepath)
+#     new_indices = np.random.choice(available_indices, subset_size, replace=False)
+#     used_indices.update(new_indices)
+#     save_used_indices(used_indices, used_indices_filepath)
 
-    print(f"New subset indices: {new_indices[:10]}...")  # Print the first 10 new indices for verification
+#     print(f"New subset indices: {new_indices[:10]}...")  # Print the first 10 new indices for verification
 
-    subset_sampler = torch.utils.data.SubsetRandomSampler(new_indices)
+#     subset_sampler = torch.utils.data.SubsetRandomSampler(new_indices)
     
-    subset_loader = torch.utils.data.DataLoader(
-        train_loader.dataset,
-        batch_size=train_loader.batch_size,
-        sampler=subset_sampler,
-        num_workers=train_loader.num_workers,
-        pin_memory=True,
-    )
-    return subset_loader
+#     subset_loader = torch.utils.data.DataLoader(
+#         train_loader.dataset,
+#         batch_size=train_loader.batch_size,
+#         sampler=subset_sampler,
+#         num_workers=train_loader.num_workers,
+#         pin_memory=True,
+#     )
+#     return subset_loader
 
 # Step 1: Load the pre-trained model
 def load_model(checkpoint_path, model_class):
@@ -178,7 +178,7 @@ def main_worker(args):
     model2 = set_gpu(args, model2)
     print("Second model moved to GPU")
 
-    data, train_augmentation = get_dataset(args)
+    data, train_augmentation = get_dataset(args)  ##data: 5k samples out of train set
 
     if args.label_smoothing is None:
         criterion = nn.CrossEntropyLoss().cuda()
