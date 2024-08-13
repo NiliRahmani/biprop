@@ -152,12 +152,12 @@ def main_worker(args):
     if hasattr(args, 'alphas_betas'): #kkkkkkkkkk
         for alphas, betas in args.alphas_betas: #kkkkkkkkkk
             set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
-            acc1, acc5 = validate(data.val_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc1, acc5 = validate(data.test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1)
     elif hasattr(args, 'alphas'): #kkkkkkkkkk
         for alphas in args.alphas: #kkkkkkkkkk
             set_alphas(model2, alphas) #kkkkkkkkkk
-            acc1, acc5 = validate(data.val_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc1, acc5 = validate(data.test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1)
     print(f"Subset Accuracy: {acc_list}") #kkkkkkkkkk
 
