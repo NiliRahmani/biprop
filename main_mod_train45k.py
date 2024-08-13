@@ -5,7 +5,8 @@ import time
 import pickle
 import ast
 from torchsummary import summary
-        
+
+
 from torch.utils.tensorboard import SummaryWriter
 import torch
 import torch.nn as nn
@@ -186,7 +187,7 @@ def main_worker(args):
 
     # Create the reproducible subset of train data
     train_loader = data.train_loader
-    subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl", val_indices_filepath="/content/biprop/val_indices.pkl")
+    # subset_loader = get_reproducible_train_subset(train_loader, subset_size=2000, seed=args.seed, used_indices_filepath="used_indices.pkl", val_indices_filepath="/content/biprop/val_indices.pkl")
 
     # # Evaluate model2 on the subset of train set for each set of alphas
     # acc_list = []
@@ -201,12 +202,12 @@ def main_worker(args):
     if args.betas is not None:  # lllllllllllll
         for alphas, betas in zip(args.alphas, args.betas):  # lllllllllllll
             set_alphas_betas(model2, alphas, betas)  # lllllllllllll
-            acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc1_2, acc5_2 = validate(train_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1_2)
     else:  # lllllllllllll
         for alphas in args.alphas:  # lllllllllllll
             set_alphas_betas(model2, alphas)  # lllllllllllll
-            acc1_2, acc5_2 = validate(subset_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc1_2, acc5_2 = validate(train_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1_2)
     print(f"Subset Accuracy: {acc_list}")
 
@@ -280,25 +281,69 @@ def resume(args, model, optimizer):
         print(f"=> No checkpoint found at '{args.resume}'")
 
 
+
 def get_dataset(args):
     train_augmentation = 'Default'
-    # Check if gaussian augmenation is being used
+    
+    # Check if gaussian augmentation is being used
     if args.gaussian_aug:
-      # Add _gaussian to args.set
-      args.set = args.set + '_gaussian'
-      # Set train augmentation to gaussian for logging purposes
-      train_augmentation = 'Gaussian'
-    # Check if augmix is being used
+        args.set = args.set + '_gaussian'
+        train_augmentation = 'Gaussian'
     elif args.augmix:
-      # Add _augmix to args.set
-      args.set = args.set + '_augmix'
-      # Set train augmentation to augmix for logging purposes
-      train_augmentation = 'Augmix'
+        args.set = args.set + '_augmix'
+        train_augmentation = 'Augmix'
+
     print(f"=> Getting {args.set} dataset")
-    dataset = getattr(data, args.set)(args)
 
-    return dataset, train_augmentation
+    # Define any transformations
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        # Add other transformations here
+    ])
 
+    # Load the CIFAR10 dataset
+    dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+
+    # Ensure reproducibility by setting the random seed
+    if args.seed is not None:
+        random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+
+    # Total number of samples in the dataset
+    total_samples = 50000 #len(dataset)
+
+    # Create a subset with 45,000 random samples
+    num_samples1 = 45000
+    all_indices = list(range(total_samples))
+    indices1 = random.sample(all_indices, num_samples1)
+
+    # Create the remaining subset with 5,000 samples
+    indices2 = list(set(all_indices) - set(indices1))
+
+    # Subset objects for both datasets
+    subset1 = Subset(dataset, indices1)
+    subset2 = Subset(dataset, indices2)
+
+    # Split subset1 into a training set with 40,000 samples and a validation set with 5,000 samples
+    num_val_samples = 5000
+    num_train_samples = num_samples1 - num_val_samples
+    subset1_train, subset1_val = random_split(subset1, [num_train_samples, num_val_samples])
+
+    # Create DataLoaders for both subsets
+    train_loader1 = DataLoader(subset1_train, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
+    val_loader = DataLoader(subset1_val, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
+    train_loader2 = DataLoader(subset2, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
+
+    # Wrap the DataLoaders in a class to match the expected structure
+    class DatasetWrapper:
+        def __init__(self, train_loader, val_loader=None):
+            self.train_loader = train_loader
+            self.val_loader = val_loader
+
+    # Return dataset1 with both train_loader and val_loader, and dataset2 with only train_loader
+    return DatasetWrapper(train_loader2), train_augmentation
 
 def get_model(args):
     if args.first_layer_dense:
