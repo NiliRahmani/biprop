@@ -139,7 +139,7 @@ def main_worker(args):
     model2 = set_gpu(args, model2)
     print("Second model moved to GPU")
 
-    data, train_augmentation = get_dataset(args)
+    test_loader, _ = get_dataset(args)
 
     if args.label_smoothing is None:
         criterion = nn.CrossEntropyLoss().cuda()
@@ -152,12 +152,12 @@ def main_worker(args):
     if hasattr(args, 'alphas_betas'): #kkkkkkkkkk
         for alphas, betas in args.alphas_betas: #kkkkkkkkkk
             set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
-            acc1, acc5 = validate(data.test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc1, acc5 = validate(test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1)
     elif hasattr(args, 'alphas'): #kkkkkkkkkk
         for alphas in args.alphas: #kkkkkkkkkk
             set_alphas(model2, alphas) #kkkkkkkkkk
-            acc1, acc5 = validate(data.test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
+            acc1, acc5 = validate(test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1)
     print(f"Subset Accuracy: {acc_list}") #kkkkkkkkkk
 
@@ -229,24 +229,29 @@ def resume(args, model, optimizer):
         print(f"=> No checkpoint found at '{args.resume}'")
 
 
-def get_dataset(args):
-    train_augmentation = 'Default'
-    # Check if gaussian augmenation is being used
-    if args.gaussian_aug:
-      # Add _gaussian to args.set
-      args.set = args.set + '_gaussian'
-      # Set train augmentation to gaussian for logging purposes
-      train_augmentation = 'Gaussian'
-    # Check if augmix is being used
-    elif args.augmix:
-      # Add _augmix to args.set
-      args.set = args.set + '_augmix'
-      # Set train augmentation to augmix for logging purposes
-      train_augmentation = 'Augmix'
-    print(f"=> Getting {args.set} dataset")
-    dataset = getattr(data, args.set)(args)
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
+from torch.utils.data import DataLoader
 
-    return dataset, train_augmentation
+def get_dataset(args):
+    # Define the transformations (if needed)
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        # Add any additional transformations here
+    ])
+
+    # Load the test dataset
+    print(f"=> Getting {args.set} test dataset")
+    test_set = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
+
+    # Create DataLoader for the test set
+    test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
+
+    # No augmentation applied, so set train_augmentation to None
+    train_augmentation = None
+
+    # Return the test_loader instead of the full dataset
+    return test_loader, train_augmentation
 
 
 def get_model(args):
