@@ -151,7 +151,8 @@ def main_worker(args):
     acc_list = [] #kkkkkkkkkk
     if hasattr(args, 'alphas_betas'): #kkkkkkkkkk
         for alphas, betas in args.alphas_betas: #kkkkkkkkkk
-            set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
+            print('\n\n*************    set_alphas_betas       *************\n\n')
+            # set_alphas_betas(model2, alphas, betas) #kkkkkkkkkk
             acc1, acc5 = validate(test_loader, model2, criterion, args, writer=None, epoch=args.start_epoch)
             acc_list.append(acc1)
     elif hasattr(args, 'alphas'): #kkkkkkkkkk
